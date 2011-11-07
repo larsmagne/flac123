@@ -30,6 +30,7 @@ static int ao_output_id;
 
 typedef struct {
     char *driver;
+    char *buffer_size;
     char *wavfile;
     int remote;
     int quiet;
@@ -42,6 +43,7 @@ struct poptOption cli_options[] = {
     { "driver", 'd', POPT_ARG_STRING, (void *)&(cli_args.driver), 0, "set libao output driver (oss, esd, arts, macosx, etc).  Default is " AUDIO_DEFAULT, NULL },
     { "wav", 'w', POPT_ARG_STRING, (void *)&(cli_args.wavfile), 0, "send output to wav file (use --wav=- and -q for stdout)", "FILENAME" },
     { "remote", 'R', POPT_ARG_NONE, (void *)&(cli_args.remote), 0, "set remote mode for programmatic control", NULL },
+    { "buffer-size", 'b', POPT_ARG_STRING, (void *)&(cli_args.buffer_size), 0, "buffer size", NULL },
     { "quiet", 'q', POPT_ARG_NONE, (void *)&(cli_args.quiet), 0, "suppress text output", NULL },
     POPT_AUTOHELP
     { 0, 0, 0, 0, 0, NULL, NULL }
@@ -88,7 +90,8 @@ int main(int argc, const char **argv)
 
     ao_options = malloc(1024);
     *ao_options = NULL;
-    ao_append_option(ao_options, "buffer_size", "8192");
+    if (cli_args.buffer_size)
+      ao_append_option(ao_options, "buffer_size", cli_args.buffer_size);
 
     if (! cli_args.wavfile) {
       if (cli_args.driver) {
