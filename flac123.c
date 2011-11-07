@@ -65,6 +65,9 @@ static void signal_handler(int);
 static int quit_now = 0;
 static int interrupted = 0;
 
+float scale = 1;
+ao_option **ao_options = NULL;
+
 int main(int argc, const char **argv)
 {
     int tmp;
@@ -83,20 +86,26 @@ int main(int argc, const char **argv)
 
     ao_initialize();
 
-    if (cli_args.driver) {
+    ao_options = malloc(1024);
+    *ao_options = NULL;
+    ao_append_option(ao_options, "buffer_size", "8192");
+
+    if (! cli_args.wavfile) {
+      if (cli_args.driver) {
 	ao_output_id = ao_driver_id(cli_args.driver);
 	if(ao_output_id < 0) {
-	    fprintf(stderr, "Error identifying libao driver %s\n", cli_args.driver);
-	    ao_output_id = ao_default_driver_id();
+	  fprintf(stderr, "Error identifying libao driver %s\n", cli_args.driver);
+	  ao_output_id = ao_default_driver_id();
 	}
-    } else {
+      } else {
 	ao_output_id = ao_default_driver_id();
-    }
+      }
 
-    if (ao_output_id < 0) {
+      if (ao_output_id < 0) {
 	fprintf(stderr, "No fallback libao driver found, exiting.\n");
 	ao_shutdown();
 	exit(1);
+      }
     }
 
     if (cli_args.remote)
@@ -130,7 +139,7 @@ static void print_file_info(const char *filename)
     {
 	if (got_vorbis)
 	{
-	    printf("@I ID3:%s%s%s%s%s%s\n",
+	  fprintf(stderr, "@I ID3:%s%s%s%s%s%s\n",
 		   file_info.title,
 		   file_info.artist,
 		   file_info.album,
@@ -148,7 +157,7 @@ static void print_file_info(const char *filename)
 	    if (dot && dot == strstr(dupe, ".flac"))
 		*dot = '\0';
 
-	    printf("@I %s\n", dupe);
+	    fprintf(stderr, "@I %s\n", dupe);
 	    free(dupe);
 	}
     }
@@ -244,7 +253,7 @@ FLAC__bool decoder_constructor(const char *filename)
 	}
     }
     else if (first_time) {
-	if (!(file_info.ao_dev = ao_open_live(ao_output_id, &(file_info.ao_fmt), NULL)))
+	if (!(file_info.ao_dev = ao_open_live(ao_output_id, &(file_info.ao_fmt), *ao_options)))
 	{
 	    fprintf(stderr, "Error opening ao device %d\n", ao_output_id);
 #ifdef LEGACY_FLAC
@@ -261,7 +270,7 @@ FLAC__bool decoder_constructor(const char *filename)
     {
         /* close the ao_device and re-open */
 	ao_close(file_info.ao_dev);
-	if (!(file_info.ao_dev = ao_open_live(ao_output_id, &(file_info.ao_fmt), NULL)))
+	if (!(file_info.ao_dev = ao_open_live(ao_output_id, &(file_info.ao_fmt), *ao_options)))
 	{
 	    fprintf(stderr, "Error opening ao device %d\n", ao_output_id);
 #ifdef LEGACY_FLAC
@@ -328,7 +337,7 @@ static void play_remote_file(void)
 {
     int status = 0;
 
-    printf("@R FLAC123\n");
+    fprintf(stderr, "@R FLAC123\n");
 
     while (status == 0)
     {
@@ -343,7 +352,7 @@ static void play_remote_file(void)
 #endif
 	    {
 		decoder_destructor();
-		printf("@P 0\n");
+		fprintf(stderr, "@P 0\n");
 	    }
 #ifdef LEGACY_FLAC
 	    else if (!FLAC__file_decoder_process_single(file_info.decoder)) 
@@ -447,7 +456,7 @@ FLAC__StreamDecoderWriteStatus flac_write_hdl(const FLAC__StreamDecoder *dec,
     } else if (p->sam_fmt.bits == 16) {
         for (sample = i = 0; sample < samples; sample++) {
 	    for(channel = 0; channel < frame->header.channels; channel++,i++) {
-		u16aobuf[i] = (uint_16)(buf[channel][sample]);
+		u16aobuf[i] = (uint_16)(buf[channel][sample] * scale);
 	    }
 	} 
     }
@@ -462,7 +471,7 @@ FLAC__StreamDecoderWriteStatus flac_write_hdl(const FLAC__StreamDecoder *dec,
 
     if (cli_args.remote)
     {
-	printf("@F %u %u %.2f %.2f\n", 
+      fprintf(stderr, "@F %u %u %.2f %.2f\n", 
 	       p->current_sample, 
 	       p->total_samples > 0 ? 
 	       p->total_samples - p->current_sample : p->current_sample,

@@ -68,3 +68,5 @@ extern void decoder_destructor(void);
 extern int remote_get_input_wait(void);
 extern int remote_get_input_nowait(void);
 extern FLAC__bool get_vorbis_comments(const char *filename);
+
+extern float scale;

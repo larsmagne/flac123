@@ -109,14 +109,14 @@ static int remote_parse_input(void)
 
 	    if (!decoder_constructor(arg))
 	    {
-		printf("@E Error opening %s\n", arg);
+		fprintf(stderr, "@E Error opening %s\n", arg);
 		free(arg);
 		return 0; 
 	    }
         }
         else
         {
-            printf("@E Missing argument to '%s'\n", input);
+            fprintf(stderr, "@E Missing argument to '%s'\n", input);
             return 0;
         }
     }
@@ -184,8 +184,17 @@ static int remote_parse_input(void)
     {
 	if (file_info.is_loaded == true)
 	{
-	    printf("@P 0\n");
+	    fprintf(stderr, "@P 0\n");
 	    decoder_destructor();
+	}
+    }
+
+    else if (strcasecmp(input, "V") == 0 || strcasecmp(input, "VOLUME") == 0)
+    {
+        if (arg)
+	{
+	    scale = atof(arg);
+	    fprintf(stderr, "@V %f\n", scale);
 	}
     }
 
@@ -196,12 +205,12 @@ static int remote_parse_input(void)
 	    if (file_info.is_playing == true)
 	    {
 		file_info.is_playing = false;
-		printf("@P 1\n");
+		fprintf(stderr, "@P 1\n");
 	    }
 	    else
 	    {
 		file_info.is_playing = true;
-		printf("@P 2\n");
+		fprintf(stderr, "@P 2\n");
 	    }
 	}
     }
