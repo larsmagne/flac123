@@ -404,6 +404,10 @@ void flac_metadata_hdl(const FLAC__StreamDecoder *dec,
 	if (meta->data.stream_info.bits_per_sample == 8 && !cli_args.wavfile)
 	    p->ao_fmt.bits = 16;
 #endif
+	// Apparently libao doesn't quite like 24 bit samples?  I
+	// couldn't get it to work, anyway.
+	if (p->ao_fmt.bits == 24)
+	  p->ao_fmt.bits = 32;
 	p->ao_fmt.rate = meta->data.stream_info.sample_rate;
 	p->ao_fmt.channels = meta->data.stream_info.channels;
 	p->ao_fmt.byte_format = AO_FMT_NATIVE;
@@ -436,6 +440,7 @@ FLAC__StreamDecoderWriteStatus flac_write_hdl(const FLAC__StreamDecoder *dec,
 	* (p->ao_fmt.bits / 8);
     static uint_8 aobuf[FLAC__MAX_BLOCK_SIZE * FLAC__MAX_CHANNELS *
 			sizeof(uint_32)]; /*oink!*/
+    uint_32 *u32aobuf = (uint_32 *) aobuf;
     uint_16 *u16aobuf = (uint_16 *) aobuf;
     uint_8   *u8aobuf = (uint_8  *) aobuf;
     float elapsed, remaining_time;
@@ -460,6 +465,21 @@ FLAC__StreamDecoderWriteStatus flac_write_hdl(const FLAC__StreamDecoder *dec,
         for (sample = i = 0; sample < samples; sample++) {
 	    for(channel = 0; channel < frame->header.channels; channel++,i++) {
 		u16aobuf[i] = (uint_16)(buf[channel][sample] * scale);
+	    }
+	} 
+    } else if (p->sam_fmt.bits == 24) {
+        for (sample = i = 0; sample < samples; sample++) {
+	    for(channel = 0; channel < frame->header.channels; channel++,i++) {
+	      uint_32 s = buf[channel][sample] * scale;
+	      // libao expects 32 bit samples, so leave the 8 lowest
+	      // bits blank (otherwise things will be very quiet).
+	      u32aobuf[i] = s << 8;
+	    }
+	} 
+    } else if (p->sam_fmt.bits == 32) {
+        for (sample = i = 0; sample < samples; sample++) {
+	    for(channel = 0; channel < frame->header.channels; channel++,i++) {
+	      u32aobuf[i] = buf[channel][sample] * scale;
 	    }
 	} 
     }
