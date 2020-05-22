@@ -1,0 +1,8 @@
+Makefile
+compile
+config.log
+config.status
+flac123
+*.o
+*.Po
+autom4te.cache/*
